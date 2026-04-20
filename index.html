@@ -1999,18 +1999,18 @@
             // summary rows
             const ss = 'border:none;font-weight:700;padding:8px 6px;background:#f0faf5;';
             if (isArabic) {
-                const nc = 7; // updated colspan after removing 2 cols
+                const nc = 7;
                 tableRows +=
-                    '<tr><td colspan="' + nc + '" style="' + ss + 'text-align:right">إجمالي المشروع بدون ضريبة (رقماً): ' + fmt(totExcl) + '</td></tr>' +
-                    '<tr><td colspan="' + nc + '" style="' + ss + 'text-align:right">إجمالي الضريبة (رقماً): ' + fmt(totVAT) + '</td></tr>' +
-                    '<tr><td colspan="' + nc + '" style="' + ss + 'text-align:right">إجمالي المشروع شامل الضرائب المطبقة في المملكة العربية السعودية (رقماً): ' + fmt(totIncl) + '</td></tr>';
+                    '<tr class="sr"><td colspan="' + nc + '" style="' + ss + 'text-align:right">إجمالي المشروع بدون ضريبة (رقماً): ' + fmt(totExcl) + '</td></tr>' +
+                    '<tr class="sr"><td colspan="' + nc + '" style="' + ss + 'text-align:right">إجمالي الضريبة (رقماً): ' + fmt(totVAT) + '</td></tr>' +
+                    '<tr class="sr"><td colspan="' + nc + '" style="' + ss + 'text-align:right">إجمالي المشروع شامل الضرائب المطبقة في المملكة العربية السعودية (رقماً): ' + fmt(totIncl) + '</td></tr>';
             } else {
                 tableRows +=
-                    '<tr class="tr">' +
-                    '<td colspan="4" style="' + ss + 'text-align:right">Total</td>' +
-                    '<td style="' + ss + '">' + fmt(totExcl) + '</td>' +
-                    '<td style="' + ss + '">' + fmt(totVAT)  + '</td>' +
-                    '<td style="' + ss + '">' + fmt(totIncl) + '</td>' +
+                    '<tr class="sr">' +
+                    '<td colspan="4" style="text-align:right;border:none;font-weight:700;padding:8px 6px">Total</td>' +
+                    '<td style="border:none;font-weight:700;padding:8px 6px">' + fmt(totExcl) + '</td>' +
+                    '<td style="border:none;font-weight:700;padding:8px 6px">' + fmt(totVAT)  + '</td>' +
+                    '<td style="border:none;font-weight:700;padding:8px 6px">' + fmt(totIncl) + '</td>' +
                     '</tr>';
             }
 
@@ -2030,21 +2030,24 @@
                 '<th>Unit Price</th><th>Total (Excl. VAT)</th><th>VAT (15%)</th><th>Total (Incl. VAT)</th>' +
             '</tr></thead>';
 
-            // ── Shared CSS ─────────────────────────────────────────────────
-            const sharedCSS =
+            // ── CSS ────────────────────────────────────────────────────────
+            const arCSS =
+                'body{font-family:"Noto Sans Arabic",Arial,sans-serif;direction:rtl;font-size:11pt;color:#222;line-height:1.65;}' +
                 'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;direction:rtl;}' +
                 'thead tr{background:#1C8657;color:#fff;}' +
                 'th{padding:6px 5px;text-align:center;border:1px solid #157E4D;}' +
                 'td{padding:5px 4px;border:1px solid #ccc;text-align:center;}' +
-                '.tr td{background:#e8f5ee;font-weight:700;}' +
+                '.sr td{background:#f0faf5;font-weight:700;}' +
                 'p{margin:0 0 9px 0;}';
 
-            const arCSS = 'body{font-family:"Noto Sans Arabic",Arial,sans-serif;direction:rtl;font-size:11pt;color:#222;line-height:1.65;}' +
-                sharedCSS.replace('direction:rtl', 'direction:rtl'); // keep rtl on table
-
-            const enCSS = 'body{font-family:Calibri,Arial,sans-serif;direction:ltr;font-size:11pt;color:#222;line-height:1.65;}' +
-                sharedCSS.replace('table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;direction:rtl;}',
-                                  'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;}');
+            const enCSS =
+                'body{font-family:Calibri,Arial,sans-serif;direction:ltr;font-size:11pt;color:#222;line-height:1.65;}' +
+                'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;}' +
+                'thead tr{background:#1C8657;color:#fff;}' +
+                'th{padding:6px 5px;text-align:center;border:1px solid #157E4D;}' +
+                'td{padding:5px 4px;border:1px solid #ccc;text-align:center;}' +
+                '.sr td{background:#f0faf5;font-weight:700;}' +
+                'p{margin:0 0 9px 0;}';
 
             // ── Text footer (same for both languages) ─────────────────────
             const textFooter =
