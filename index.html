@@ -1958,72 +1958,90 @@
             const data = getProposalData();
             const VAT  = 0.15;
             const fmt  = n => Number(n).toLocaleString('en-US', {minimumFractionDigits: 2});
-
-            let tableRows = '';
-            let totExcl = 0, totVAT = 0, totIncl = 0;
-
-            if (isArabic) {
-                // Arabic table: RTL, 9 cols, green header
-                data.deliverables.forEach((d, i) => {
-                    const qty   = parseFloat(d.quantity) || 1;
-                    const price = parseFloat(d.unitPrice) || 0;
-                    const excl  = qty * price;
-                    const vat   = excl * VAT;
-                    const incl  = excl + vat;
-                    totExcl += excl; totVAT += vat; totIncl += incl;
-                    tableRows += `<tr>
-                        <td style="text-align:center">${fmt(incl)}</td>
-                        <td style="text-align:center">${fmt(vat)}</td>
-                        <td style="text-align:center">${fmt(excl)}</td>
-                        <td style="text-align:center">${fmt(price)}</td>
-                        <td>${d.specs||''}</td>
-                        <td style="text-align:center">${fmt(qty)}</td>
-                        <td style="text-align:center">${d.unit||'مقطوعة'}</td>
-                        <td>${d.name}</td>
-                        <td style="text-align:center">${i+1}</td>
-                    </tr>`;
-                });
-                tableRows += `
-                    <tr><td colspan="9" style="text-align:right;font-weight:700;padding:10px 8px">إجمالي المشروع بدون ضريبة (رقماً): ${fmt(totExcl)}</td></tr>
-                    <tr><td colspan="9" style="text-align:right;font-weight:700;padding:10px 8px">إجمالي الضريبة (رقماً): ${fmt(totVAT)}</td></tr>
-                    <tr><td colspan="9" style="text-align:right;font-weight:700;padding:10px 8px">إجمالي المشروع شامل الضرائب: ${fmt(totIncl)}</td></tr>`;
-            } else {
-                // English table: 7 cols, blue header
-                data.deliverables.forEach((d, i) => {
-                    const qty   = parseFloat(d.quantity) || 1;
-                    const price = parseFloat(d.unitPrice) || 0;
-                    const excl  = qty * price;
-                    const vat   = excl * VAT;
-                    const incl  = excl + vat;
-                    totExcl += excl; totVAT += vat; totIncl += incl;
-                    tableRows += `<tr>
-                        <td style="text-align:center">${i+1}</td>
-                        <td>${d.name}</td>
-                        <td style="text-align:center">${fmt(qty)}</td>
-                        <td style="text-align:center">${fmt(price)}</td>
-                        <td style="text-align:center">${fmt(excl)}</td>
-                        <td style="text-align:center">${fmt(vat)}</td>
-                        <td style="text-align:center">${fmt(incl)}</td>
-                    </tr>`;
-                });
-                tableRows += `<tr class="total-row">
-                    <td colspan="4" style="text-align:right"><strong>Total</strong></td>
-                    <td style="text-align:center"><strong>${fmt(totExcl)}</strong></td>
-                    <td style="text-align:center"><strong>${fmt(totVAT)}</strong></td>
-                    <td style="text-align:center"><strong>${fmt(totIncl)}</strong></td>
-                </tr>`;
-            }
-
             const today = new Date(data.proposalDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US');
 
+            // ── Shared table rows builder ──────────────────────────────────
+            let tableRows = '';
+            let totExcl = 0, totVAT = 0, totIncl = 0;
+            data.deliverables.forEach((d, i) => {
+                const qty   = parseFloat(d.quantity) || 1;
+                const price = parseFloat(d.unitPrice) || 0;
+                const excl  = qty * price;
+                const vat   = excl * VAT;
+                const incl  = excl + vat;
+                totExcl += excl; totVAT += vat; totIncl += incl;
+
+                if (isArabic) {
+                    tableRows += `<tr>
+                        <td>${fmt(incl)}</td>
+                        <td>${fmt(vat)}</td>
+                        <td>${fmt(excl)}</td>
+                        <td>${fmt(price)}</td>
+                        <td>${d.specs||''}</td>
+                        <td>${fmt(qty)}</td>
+                        <td>${d.unit||'مقطوعة'}</td>
+                        <td style="text-align:right">${d.name}</td>
+                        <td>${i+1}</td>
+                    </tr>`;
+                } else {
+                    tableRows += `<tr>
+                        <td>${i+1}</td>
+                        <td style="text-align:left">${d.name}</td>
+                        <td>${fmt(qty)}</td>
+                        <td>${fmt(price)}</td>
+                        <td>${fmt(excl)}</td>
+                        <td>${fmt(vat)}</td>
+                        <td>${fmt(incl)}</td>
+                    </tr>`;
+                }
+            });
+
+            // summary rows — same style both languages
+            const summaryStyle = 'border:none;font-weight:700;padding:8px 6px;';
+            if (isArabic) {
+                tableRows += `
+                    <tr style="background:#f5f5f5"><td colspan="9" style="${summaryStyle}text-align:right">إجمالي المشروع بدون ضريبة (رقماً): ${fmt(totExcl)}</td></tr>
+                    <tr style="background:#f5f5f5"><td colspan="9" style="${summaryStyle}text-align:right">إجمالي الضريبة (رقماً): ${fmt(totVAT)}</td></tr>
+                    <tr style="background:#f5f5f5"><td colspan="9" style="${summaryStyle}text-align:right">إجمالي المشروع شامل الضرائب المطبقة في المملكة العربية السعودية (رقماً): ${fmt(totIncl)}</td></tr>`;
+            } else {
+                tableRows += `
+                    <tr class="total-row"><td colspan="4" style="${summaryStyle}text-align:right">Total</td>
+                        <td style="${summaryStyle}">${fmt(totExcl)}</td>
+                        <td style="${summaryStyle}">${fmt(totVAT)}</td>
+                        <td style="${summaryStyle}">${fmt(totIncl)}</td>
+                    </tr>`;
+            }
+
+            // ── Shared green-header table CSS ──────────────────────────────
+            const sharedTableCSS = `
+                table { width:100%; border-collapse:collapse; margin:14px 0; font-size:10pt; }
+                thead tr { background:#1C8657; color:#fff; }
+                th { padding:7px 6px; text-align:center; border:1px solid #157E4D; font-size:9.5pt; }
+                td { padding:6px 5px; border:1px solid #ccc; text-align:center; }
+                .total-row td { background:#e8f5ee; font-weight:700; }`;
+
+            // ── Arabic CSS ─────────────────────────────────────────────────
+            const arCSS = `
+                body { font-family:'Noto Sans Arabic',Arial,sans-serif; direction:rtl; font-size:11pt; color:#222; line-height:1.7; }
+                p { margin:0 0 10px 0; }
+                .gap { margin-top:18px; }
+                ${sharedTableCSS}`;
+
+            // ── English CSS (same style as Arabic) ─────────────────────────
+            const enCSS = `
+                body { font-family:Calibri,Arial,sans-serif; direction:ltr; font-size:11pt; color:#222; line-height:1.7; }
+                p { margin:0 0 10px 0; }
+                .gap { margin-top:18px; }
+                ${sharedTableCSS}`;
+
+            // ── Arabic content ─────────────────────────────────────────────
             const arContent = `
-                <div class="doc-header-info">
-                    <div style="text-align:right;font-size:1.1em;font-weight:700;margin-bottom:6px">عرض مالي رقم: ${data.proposalNum}</div>
-                    <div style="text-align:right;margin-bottom:16px">التاريخ: ${today}</div>
-                    <div style="text-align:right;font-weight:700;font-size:1.05em;margin-bottom:4px">السادة/ ${data.clientName}</div>
-                </div>
-                <p style="margin:12px 0">السلام عليكم ورحمة الله وبركاته</p>
-                <p style="margin:12px 0">نشكركم لإعطائنا فرصة تسليم هذا العرض المالي إلى حضراتكم، بخصوص مشروع (${data.projectName})</p>
+                <div style="text-align:right;font-size:1.05em;font-weight:700;margin-bottom:4px">عرض مالي رقم: ${data.proposalNum}</div>
+                <div style="text-align:right;margin-bottom:4px">التاريخ: ${today}</div>
+                <div style="text-align:right;font-weight:700;margin-bottom:16px">السادة/ ${data.clientName}</div>
+                <div class="gap"></div>
+                <p>السلام عليكم ورحمة الله وبركاته</p>
+                <p>نشكركم لإعطائنا فرصة تسليم هذا العرض المالي إلى حضراتكم، بخصوص مشروع (${data.projectName})</p>
                 <table>
                     <thead><tr>
                         <th>الاجمالي بعد الضريبة</th>
@@ -2038,27 +2056,21 @@
                     </tr></thead>
                     <tbody>${tableRows}</tbody>
                 </table>
-                <p style="margin:16px 0">نحن ملتزمون بتقديم أفضل الخدمات وضمان التنفيذ بكفاءة عالية. في حال وجود أي استفسارات بخصوص هذا العرض، الرجاء عدم التردد بالتواصل معنا في أي وقت.</p>
-                <p style="margin:12px 0">شاكرين لكم ثقتكم، ونتطلع إلى التعاون معكم لتحقيق النجاح المنشود.</p>
-                <p style="margin:12px 0">وتفضلوا بقبول فائق الاحترام والتقدير،</p>
-                <p style="margin:12px 0;font-weight:700">شركة عناقيد المعرفة للتجارة</p>
+                <p>نحن ملتزمون بتقديم أفضل الخدمات وضمان التنفيذ بكفاءة عالية. في حال وجود أي استفسارات بخصوص هذا العرض، الرجاء عدم التردد بالتواصل معنا في أي وقت.</p>
+                <p>شاكرين لكم ثقتكم، ونتطلع إلى التعاون معكم لتحقيق النجاح المنشود.</p>
+                <p>وتفضلوا بقبول فائق الاحترام والتقدير،</p>
+                <p style="font-weight:700;margin-top:20px">شركة عناقيد المعرفة للتجارة</p>
                 <p style="font-weight:700">منصة اعناب</p>`;
 
+            // ── English content (same structure as Arabic) ─────────────────
             const enContent = `
-                <table class="header-table">
-                    <tr>
-                        <td rowspan="2" class="proj-cell"><strong>Project Name: ${data.projectName}</strong></td>
-                        <td class="sep-cell"></td>
-                        <td class="info-cell"><strong>Date: ${today}</strong></td>
-                    </tr>
-                    <tr>
-                        <td class="sep-cell"></td>
-                        <td class="info-cell"><strong>Proposal No: ${data.proposalNum}</strong></td>
-                    </tr>
-                </table>
-                <p style="margin:16px 0"><strong>Dear ${data.clientName},</strong></p>
-                <p style="margin:12px 0">Thank you for giving us the opportunity to submit this proposal for the above-mentioned project.</p>
-                <p style="margin:12px 0">Based on the technical proposal submitted by us, we are pleased to present our financial offer for the project:</p>
+                <div style="font-size:1.05em;font-weight:700;margin-bottom:4px">Proposal No: ${data.proposalNum}</div>
+                <div style="margin-bottom:4px">Date: ${today}</div>
+                <div style="font-weight:700;margin-bottom:16px">Project: ${data.projectName}</div>
+                <div class="gap"></div>
+                <p><strong>Dear ${data.clientName},</strong></p>
+                <p>Thank you for giving us the opportunity to submit this proposal for the above-mentioned project.</p>
+                <p>Based on the technical proposal submitted by us, we are pleased to present our financial offer for the project:</p>
                 <table>
                     <thead><tr>
                         <th>SN</th><th>Deliverables</th><th>Quantity</th>
@@ -2066,39 +2078,14 @@
                     </tr></thead>
                     <tbody>${tableRows}</tbody>
                 </table>
-                <p style="margin:16px 0">If you have any inquiries regarding this offer, please do not hesitate to contact us at any time.</p>
-                <p style="margin:12px 0">With best regards,</p>
-                <p style="margin:24px 0 4px;font-weight:700">Anaqeed AlMarefa Co.</p>
+                <p>If you have any inquiries regarding this offer, please do not hesitate to contact us at any time.</p>
+                <p>With best regards,</p>
+                <p style="font-weight:700;margin-top:20px">Anaqeed AlMarefa Co.</p>
                 <p style="font-weight:700">Aanaab</p>`;
 
-            const arCSS = `
-                body { font-family: 'Noto Sans Arabic', Arial, sans-serif; direction: rtl; font-size: 11pt; color: #222; }
-                .page-header { text-align: right; }
-                .page-header img { height: 30px; }
-                .page-footer { text-align: center; }
-                .page-footer img { max-height: 55px; width: 100%; object-fit: contain; }
-                table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 10pt; }
-                thead tr { background: #1C8657; color: #fff; }
-                th { padding: 7px 5px; text-align: center; border: 1px solid #157E4D; }
-                td { padding: 6px 5px; border: 1px solid #ccc; }`;
-
-            const enCSS = `
-                body { font-family: Calibri, Arial, sans-serif; direction: ltr; font-size: 11pt; color: #222; }
-                .page-header img { height: 40px; }
-                .page-footer { text-align: center; }
-                .page-footer img { max-height: 45px; width: 100%; object-fit: contain; }
-                .header-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-                .header-table .proj-cell { background: #D9E2F3; font-size: 11pt; padding: 10px 12px; border: 1px solid #000; width: 60%; }
-                .header-table .sep-cell  { background: #D9D9D9; width: 2%; border: 1px solid #000; }
-                .header-table .info-cell { background: #fff; padding: 8px 12px; border: 1px solid #000; }
-                table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 10pt; }
-                thead tr { background: #D9E2F3; }
-                th { padding: 8px 6px; border: 1px solid #000; text-align: center; font-weight: 700; }
-                td { padding: 7px 6px; border: 1px solid #ccc; }
-                .total-row { background: #D9E2F3; font-weight: 700; }`;
-
-            const logoSrc  = isArabic ? TMPL_IMGS.AR_LOGO   : TMPL_IMGS.EN_HEADER;
-            const footSrc  = isArabic ? TMPL_IMGS.AR_FOOTER  : TMPL_IMGS.EN_FOOTER;
+            // ── Open print window ──────────────────────────────────────────
+            const logoSrc = isArabic ? TMPL_IMGS.AR_LOGO   : TMPL_IMGS.EN_HEADER;
+            const footSrc = isArabic ? TMPL_IMGS.AR_FOOTER  : TMPL_IMGS.EN_FOOTER;
 
             const printWindow = window.open('', '_blank');
             const pw = printWindow.document;
@@ -2109,31 +2096,30 @@
 <meta charset="UTF-8">
 <title>${isArabic ? 'العرض المالي - اعناب' : 'Financial Proposal - Aanaab'}</title>
 <style>
-@page { size: A4; margin: 30mm 15mm 30mm 15mm; }
-* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-html, body { margin: 0; padding: 0; }
+@page { size:A4; margin:30mm 15mm 30mm 15mm; }
+*{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+html,body{ margin:0; padding:0; }
 ${isArabic ? arCSS : enCSS}
-.print-header {
-    position: fixed; top: 0; left: 0; right: 0; height: 24mm;
-    display: flex; align-items: center; padding: 3mm 12mm;
-    ${isArabic ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}
-    background: #fff;
-    border-bottom: 1px solid #eee;
+.print-header{
+    position:fixed; top:0; left:0; right:0; height:24mm;
+    display:flex; align-items:center; padding:3mm 12mm;
+    justify-content:${isArabic ? 'flex-end' : 'flex-start'};
+    background:#fff; border-bottom:1px solid #eee;
 }
-.print-footer {
-    position: fixed; bottom: 0; left: 0; right: 0; height: 24mm;
-    display: flex; align-items: center; justify-content: center;
-    padding: 2mm 12mm; background: #fff;
-    border-top: 1px solid #eee;
+.print-footer{
+    position:fixed; bottom:0; left:0; right:0; height:24mm;
+    display:flex; align-items:center; justify-content:center;
+    padding:2mm 12mm; background:#fff; border-top:1px solid #eee;
 }
-.print-header img { height: ${isArabic ? '28px' : '38px'}; object-fit: contain; }
-.print-footer img { max-height: 52px; max-width: 90%; object-fit: contain; }
+.print-header img{ height:${isArabic ? '28px' : '38px'}; object-fit:contain; }
+.print-footer img{ max-height:52px; max-width:90%; object-fit:contain; }
+.content{ padding:0 5mm; }
 </style>
 </head>
 <body>`);
             pw.write('<div class="print-header"><img src="' + logoSrc + '" alt="logo"></div>');
             pw.write('<div class="print-footer"><img src="' + footSrc + '" alt="footer"></div>');
-            pw.write('<div class="content" style="padding:0 5mm">' + (isArabic ? arContent : enContent) + '</div>');
+            pw.write('<div class="content">' + (isArabic ? arContent : enContent) + '</div>');
             pw.write('<scri' + 'pt>setTimeout(function(){window.print();},800);<\/scri' + 'pt>');
             pw.write('</body></html>');
             pw.close();
