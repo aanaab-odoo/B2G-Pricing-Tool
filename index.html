@@ -867,7 +867,7 @@
 
             <div class="logo-container">
                 <div class="logo-icon">ع</div>
-                <h1 data-en="Aanaab Project Pricing Tool" data-ar="أداة تسعير مشاريع عناب">Aanaab Project Pricing Tool</h1>
+                <h1 data-en="Aanaab Project Pricing Tool" data-ar="أداة تسعير مشاريع اعناب">Aanaab Project Pricing Tool</h1>
             </div>
 
             <p data-en="Professional Financial Proposal Generator with Live Google Sheets Integration" 
@@ -1192,7 +1192,7 @@
                 <button class="btn" onclick="printProposal()">
                     🖨️ <span data-en="Print Proposal" data-ar="طباعة العرض">Print Proposal</span>
                 </button>
-                <button class="btn btn-secondary" onclick="exportToWord()">
+                <button class="btn btn-secondary" onclick="exportToWord(this)">
                     📝 <span data-en="Export Word" data-ar="حفظ Word">Export Word</span>
                 </button>
                 <button class="btn btn-secondary" onclick="resetForm()">
@@ -1306,8 +1306,8 @@
                 validFor: 'العرض ساري لمدة 30 يوم من تاريخ الإصدار',
                 additionalWork: 'أي عمل إضافي خارج النطاق سيتم تسعيره بشكل منفصل',
                 allRates: 'جميع الأسعار بالريال السعودي (SAR)',
-                thankYou: 'شكراً لاختياركم عناب',
-                generatedBy: 'تم إنشاء هذا العرض بواسطة أداة تسعير عناب',
+                thankYou: 'شكراً لاختياركم اعناب',
+                generatedBy: 'تم إنشاء هذا العرض بواسطة أداة تسعير اعناب',
                 termsConditions: 'الشروط والأحكام',
                 investmentSummary: 'ملخص الاستثمار',
                 teamCosts: 'تكاليف الفريق',
@@ -1341,7 +1341,7 @@
                 deliverables: 'المخرجات',
                 closingParagraph: 'نتطلع إلى فرصة العمل معكم في هذا المشروع. لا تترددوا في التواصل معنا لأي استفسارات أو مناقشات إضافية. يمثل هذا العرض التزامنا بتقديم نتائج عالية الجودة ضمن الإطار الزمني والميزانية المتفق عليهما.',
                 sincerely: 'مع خالص التقدير،',
-                aanaabTeam: 'فريق عمل عناب',
+                aanaabTeam: 'فريق عمل اعناب',
                 contactInfo: 'info@aanaab.com | www.aanaab.com',
                 proposalDate: 'التاريخ:',
                 proposalRef: 'الرقم المرجعي:',
@@ -1752,7 +1752,7 @@
                 <div style="border-bottom: 4px solid var(--aanaab-purple); padding-bottom: 30px; margin-bottom: 40px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
                         <div style="flex: 1;">
-                            <div style="font-size: 3em; font-weight: 800; color: var(--aanaab-purple); margin-bottom: 5px; letter-spacing: -1px;">عناب</div>
+                            <div style="font-size: 3em; font-weight: 800; color: var(--aanaab-purple); margin-bottom: 5px; letter-spacing: -1px;">اعناب</div>
                             <div style="font-size: 1.1em; color: #666; font-weight: 500;">AANAAB CONSULTING</div>
                         </div>
                         <div style="text-align: ${isArabic ? 'left' : 'right'}; color: #666; font-size: 0.9em;">
@@ -1898,7 +1898,7 @@
                 <!-- Footer / Signature -->
                 <div style="margin-top: 50px; padding-top: 30px; border-top: 3px solid var(--aanaab-purple); text-align: center;">
                     <div style="margin-bottom: 30px;">
-                        <div style="font-size: 2em; font-weight: 700; color: var(--aanaab-purple); margin-bottom: 10px;">عناب</div>
+                        <div style="font-size: 2em; font-weight: 700; color: var(--aanaab-purple); margin-bottom: 10px;">اعناب</div>
                         <div style="color: #666; font-size: 0.9em; margin-bottom: 20px;">${t.contactInfo}</div>
                     </div>
 
@@ -2102,32 +2102,53 @@
 <html dir="${isArabic ? 'rtl' : 'ltr'}">
 <head>
 <meta charset="UTF-8">
-<title>${isArabic ? 'العرض المالي - عناب' : 'Financial Proposal - Aanaab'}</title>
+<title>${isArabic ? 'العرض المالي - اعناب' : 'Financial Proposal - Aanaab'}</title>
 <style>
-@page { size: A4; margin: 18mm 15mm 22mm 15mm; }
+@page { size: A4; margin: 28mm 15mm 28mm 15mm; }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 html, body { margin: 0; padding: 0; }
 ${isArabic ? arCSS : enCSS}
-.page-header { position: running(header); }
-.page-footer { position: running(footer); }
-@page { @top-${isArabic ? 'right' : 'left'}: { content: element(header); } @bottom-center: { content: element(footer); } }
-@media print { .page-header, .page-footer { display: none; } }
+.print-header {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 22mm;
+    display: flex; align-items: center;
+    padding: 4mm 10mm;
+    ${isArabic ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}
+    background: white;
+}
+.print-footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 22mm;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2mm 10mm;
+    background: white;
+}
+.print-header img { height: 28px; }
+.print-footer img { max-height: 50px; max-width: 100%; object-fit: contain; }
+.content { padding: 0 5mm; }
+@media print {
+    .print-header, .print-footer { display: flex !important; }
+}
 </style>
 </head>
 <body>
-<div class="page-header"><img src="${isArabic ? TMPL_IMGS.AR_LOGO : TMPL_IMGS.EN_HEADER}" alt="logo"></div>
-<div class="page-footer"><img src="${isArabic ? TMPL_IMGS.AR_FOOTER : TMPL_IMGS.EN_FOOTER}" alt="footer"></div>
-<div style="padding-top:50px">
+<div class="print-header">
+  <img src="${isArabic ? TMPL_IMGS.AR_LOGO : TMPL_IMGS.EN_HEADER}" alt="logo">
+</div>
+<div class="print-footer">
+  <img src="${isArabic ? TMPL_IMGS.AR_FOOTER : TMPL_IMGS.EN_FOOTER}" alt="footer">
+</div>
+<div class="content">
 ${isArabic ? arContent : enContent}
 </div>
-<scri` + `pt>window.onload = function() { setTimeout(function(){ window.print(); }, 600); }<\/scri` + `pt>
+<scri` + `pt>window.onload = function() { setTimeout(function(){ window.print(); }, 700); }<\/scri` + `pt>
 </body></html>`);
             printWindow.document.close();
         }
 
         // ── Export real .docx using docx.js (CDN) ───────────────────────────
-        async function exportToWord() {
-            const btn = event.target.closest('button');
+        async function exportToWord(btnEl) {
+            const btn = btnEl || null;
             const origText = btn ? btn.innerHTML : '';
             if (btn) btn.innerHTML = '⏳ ' + (printLanguage === 'ar' ? 'جاري الإنشاء...' : 'Generating...');
 
