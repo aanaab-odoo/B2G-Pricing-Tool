@@ -2014,8 +2014,8 @@
                     '</tr>';
             }
 
-            // ── Arabic table header (6 cols, no specs/unit) ────────────────
-            const arTableHead = '<thead><tr>' +
+            // ── Arabic table header (7 cols, RTL order) ───────────────────
+            const arTableHead = '<thead><tr style="direction:rtl">' +
                 '<th>الاجمالي بعد الضريبة</th>' +
                 '<th>ضريبة القيمة المضافة</th>' +
                 '<th>الاجمالي بدون الضريبة</th>' +
@@ -2032,15 +2032,33 @@
 
             // ── Shared CSS ─────────────────────────────────────────────────
             const sharedCSS =
-                'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;}' +
+                'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;direction:rtl;}' +
                 'thead tr{background:#1C8657;color:#fff;}' +
                 'th{padding:6px 5px;text-align:center;border:1px solid #157E4D;}' +
                 'td{padding:5px 4px;border:1px solid #ccc;text-align:center;}' +
                 '.tr td{background:#e8f5ee;font-weight:700;}' +
                 'p{margin:0 0 9px 0;}';
 
-            const arCSS = 'body{font-family:"Noto Sans Arabic",Arial,sans-serif;direction:rtl;font-size:11pt;color:#222;line-height:1.65;}' + sharedCSS;
-            const enCSS = 'body{font-family:Calibri,Arial,sans-serif;direction:ltr;font-size:11pt;color:#222;line-height:1.65;}' + sharedCSS;
+            const arCSS = 'body{font-family:"Noto Sans Arabic",Arial,sans-serif;direction:rtl;font-size:11pt;color:#222;line-height:1.65;}' +
+                sharedCSS.replace('direction:rtl', 'direction:rtl'); // keep rtl on table
+
+            const enCSS = 'body{font-family:Calibri,Arial,sans-serif;direction:ltr;font-size:11pt;color:#222;line-height:1.65;}' +
+                sharedCSS.replace('table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;direction:rtl;}',
+                                  'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:9.5pt;}');
+
+            // ── Text footer (same for both languages) ─────────────────────
+            const textFooter =
+                '<div style="border-top:2px solid #6B5CA5;padding-top:10px;text-align:center;direction:rtl;">' +
+                '<div style="margin-bottom:8px;font-size:9pt;color:#555;display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;">' +
+                '<span>📍 المقر الرئيسي: 2444 شارع طه خصيفان حي الشاطئ | برج بزنس بارك | ص ب 23511 | جدة</span>' +
+                '</div>' +
+                '<div style="font-size:9pt;color:#555;display:flex;justify-content:center;align-items:center;gap:18px;flex-wrap:wrap;">' +
+                '<span>📞 +966 50 646 4663</span>' +
+                '<span>✉ info@aanaab.com</span>' +
+                '<span>🌐 aanaab.com</span>' +
+                '<span>س.ت 4030307852</span>' +
+                '</div>' +
+                '</div>';
 
             // ── Arabic content ─────────────────────────────────────────────
             const arContent =
@@ -2076,7 +2094,6 @@
             // Use table-based layout: header row, content, footer row
             // This works across all browsers without position:fixed issues
             const logoSrc = isArabic ? TMPL_IMGS.AR_LOGO   : TMPL_IMGS.EN_LOGO;
-            const footSrc = isArabic ? TMPL_IMGS.AR_FOOTER  : TMPL_IMGS.EN_FOOTER;
             const dir     = isArabic ? 'rtl' : 'ltr';
             const logoH   = isArabic ? '30' : '40';
 
@@ -2092,17 +2109,13 @@
                 'display:flex;align-items:center;justify-content:' + (isArabic?'flex-end':'flex-start') + ';}' +
                 '.hdr img{height:' + logoH + 'px;object-fit:contain;}' +
                 '.body{flex:1;padding:8mm 15mm;}' +
-                '.ftr{width:100%;padding:4mm 15mm 8mm 15mm;border-top:1px solid #ddd;' +
-                'display:flex;align-items:center;justify-content:center;}' +
-                '.ftr img{max-height:55px;max-width:85%;object-fit:contain;}' +
-                '@media print{' +
-                '.page{page-break-after:always;}' +
-                '}' +
+                '.ftr{width:100%;padding:6mm 15mm 6mm 15mm;}' +
+                '@media print{.page{page-break-after:always;}}' +
                 '</style></head><body>' +
                 '<div class="page">' +
                 '<div class="hdr"><img src="' + logoSrc + '"></div>' +
                 '<div class="body">' + (isArabic ? arContent : enContent) + '</div>' +
-                '<div class="ftr"><img src="' + footSrc + '"></div>' +
+                '<div class="ftr">' + textFooter + '</div>' +
                 '</div>' +
                 '<scri' + 'pt>setTimeout(function(){window.print();},900);<\/' + 'scri' + 'pt>' +
                 '</body></html>';
