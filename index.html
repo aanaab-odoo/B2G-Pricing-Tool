@@ -866,7 +866,6 @@
             </div>
 
             <div class="logo-container">
-                <div class="logo-icon">ع</div>
                 <h1 data-en="Aanaab Project Pricing Tool" data-ar="أداة تسعير مشاريع اعناب">Aanaab Project Pricing Tool</h1>
             </div>
 
@@ -1973,15 +1972,15 @@
                 totExcl += excl; totVAT += vat; totIncl += incl;
 
                 if (isArabic) {
-                    // Arabic: 6 cols (removed مواصفات & وحدة القياس), RTL order
+                    // RTL: first cell = rightmost. Order: رقم تسلسلي | البند | الكمية | سعر الوحدة | إجمالي بدون | ضريبة | إجمالي بعد
                     tableRows += '<tr>' +
-                        '<td>' + fmt(incl) + '</td>' +
-                        '<td>' + fmt(vat)  + '</td>' +
-                        '<td>' + fmt(excl) + '</td>' +
-                        '<td>' + fmt(price) + '</td>' +
-                        '<td>' + fmt(qty)  + '</td>' +
-                        '<td style="text-align:right">' + d.name + '</td>' +
                         '<td>' + (i+1) + '</td>' +
+                        '<td style="text-align:right">' + d.name + '</td>' +
+                        '<td>' + fmt(qty)   + '</td>' +
+                        '<td>' + fmt(price) + '</td>' +
+                        '<td>' + fmt(excl)  + '</td>' +
+                        '<td>' + fmt(vat)   + '</td>' +
+                        '<td>' + fmt(incl)  + '</td>' +
                     '</tr>';
                 } else {
                     tableRows += '<tr>' +
@@ -2014,15 +2013,15 @@
                     '</tr>';
             }
 
-            // ── Arabic table header (7 cols, RTL order) ───────────────────
-            const arTableHead = '<thead><tr style="direction:rtl">' +
-                '<th>الاجمالي بعد الضريبة</th>' +
-                '<th>ضريبة القيمة المضافة</th>' +
-                '<th>الاجمالي بدون الضريبة</th>' +
-                '<th>سعر الوحدة</th>' +
-                '<th>الكمية</th>' +
-                '<th>البند</th>' +
+            // ── Arabic table header — RTL: first th = rightmost column ────
+            const arTableHead = '<thead><tr>' +
                 '<th>الرقم التسلسلي</th>' +
+                '<th>البند</th>' +
+                '<th>الكمية</th>' +
+                '<th>سعر الوحدة</th>' +
+                '<th>الاجمالي بدون الضريبة</th>' +
+                '<th>ضريبة القيمة المضافة</th>' +
+                '<th>الاجمالي بعد الضريبة</th>' +
             '</tr></thead>';
 
             const enTableHead = '<thead><tr>' +
