@@ -2097,58 +2097,57 @@
                 td { padding: 7px 6px; border: 1px solid #ccc; }
                 .total-row { background: #D9E2F3; font-weight: 700; }`;
 
+            const logoSrc  = isArabic ? TMPL_IMGS.AR_LOGO   : TMPL_IMGS.EN_HEADER;
+            const footSrc  = isArabic ? TMPL_IMGS.AR_FOOTER  : TMPL_IMGS.EN_FOOTER;
+
             const printWindow = window.open('', '_blank');
-            printWindow.document.write(`<!DOCTYPE html>
+            const pw = printWindow.document;
+            pw.open();
+            pw.write(`<!DOCTYPE html>
 <html dir="${isArabic ? 'rtl' : 'ltr'}">
 <head>
 <meta charset="UTF-8">
 <title>${isArabic ? 'العرض المالي - اعناب' : 'Financial Proposal - Aanaab'}</title>
 <style>
-@page { size: A4; margin: 28mm 15mm 28mm 15mm; }
+@page { size: A4; margin: 30mm 15mm 30mm 15mm; }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 html, body { margin: 0; padding: 0; }
 ${isArabic ? arCSS : enCSS}
 .print-header {
-    position: fixed; top: 0; left: 0; right: 0;
-    height: 22mm;
-    display: flex; align-items: center;
-    padding: 4mm 10mm;
+    position: fixed; top: 0; left: 0; right: 0; height: 24mm;
+    display: flex; align-items: center; padding: 3mm 12mm;
     ${isArabic ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}
-    background: white;
+    background: #fff;
+    border-bottom: 1px solid #eee;
 }
 .print-footer {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    height: 22mm;
+    position: fixed; bottom: 0; left: 0; right: 0; height: 24mm;
     display: flex; align-items: center; justify-content: center;
-    padding: 2mm 10mm;
-    background: white;
+    padding: 2mm 12mm; background: #fff;
+    border-top: 1px solid #eee;
 }
-.print-header img { height: 28px; }
-.print-footer img { max-height: 50px; max-width: 100%; object-fit: contain; }
-.content { padding: 0 5mm; }
-@media print {
-    .print-header, .print-footer { display: flex !important; }
-}
+.print-header img { height: ${isArabic ? '28px' : '38px'}; object-fit: contain; }
+.print-footer img { max-height: 52px; max-width: 90%; object-fit: contain; }
 </style>
 </head>
-<body>
-<div class="print-header">
-  <img src="${isArabic ? TMPL_IMGS.AR_LOGO : TMPL_IMGS.EN_HEADER}" alt="logo">
-</div>
-<div class="print-footer">
-  <img src="${isArabic ? TMPL_IMGS.AR_FOOTER : TMPL_IMGS.EN_FOOTER}" alt="footer">
-</div>
-<div class="content">
-${isArabic ? arContent : enContent}
-</div>
-<scri` + `pt>window.onload = function() { setTimeout(function(){ window.print(); }, 700); }<\/scri` + `pt>
-</body></html>`);
-            printWindow.document.close();
+<body>`);
+            pw.write('<div class="print-header"><img src="' + logoSrc + '" alt="logo"></div>');
+            pw.write('<div class="print-footer"><img src="' + footSrc + '" alt="footer"></div>');
+            pw.write('<div class="content" style="padding:0 5mm">' + (isArabic ? arContent : enContent) + '</div>');
+            pw.write('<scri' + 'pt>setTimeout(function(){window.print();},800);<\/scri' + 'pt>');
+            pw.write('</body></html>');
+            pw.close();
         }
 
         // ── Export real .docx using docx.js (CDN) ───────────────────────────
-        async function exportToWord(btnEl) {
-            const btn = btnEl || null;
+        let _exportBtn = null;
+        function exportToWord(btnEl) {
+            _exportBtn = btnEl || null;
+            _doExportToWord();
+        }
+
+        async function _doExportToWord() {
+            const btn = _exportBtn;
             const origText = btn ? btn.innerHTML : '';
             if (btn) btn.innerHTML = '⏳ ' + (printLanguage === 'ar' ? 'جاري الإنشاء...' : 'Generating...');
 
@@ -2175,16 +2174,19 @@ ${isArabic ? arContent : enContent}
                 const VAT = 0.15;
                 const fmt = n => Number(n).toLocaleString('en-US', {minimumFractionDigits: 2});
 
-                // Helper: fetch image URL → ArrayBuffer
-                async function fetchImg(dataUri) {
-                    const res = await fetch(dataUri);
-                    return await res.arrayBuffer();
+                // Convert base64 data URI → Uint8Array (no fetch needed)
+                function dataUriToUint8(dataUri) {
+                    const base64 = dataUri.split(',')[1];
+                    const binary = atob(base64);
+                    const arr = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+                    return arr;
                 }
 
-                const arLogoData   = await fetchImg(TMPL_IMGS.AR_LOGO);
-                const arFooterData = await fetchImg(TMPL_IMGS.AR_FOOTER);
-                const enHeaderData = await fetchImg(TMPL_IMGS.EN_HEADER);
-                const enFooterData = await fetchImg(TMPL_IMGS.EN_FOOTER);
+                const arLogoData   = dataUriToUint8(TMPL_IMGS.AR_LOGO);
+                const arFooterData = dataUriToUint8(TMPL_IMGS.AR_FOOTER);
+                const enHeaderData = dataUriToUint8(TMPL_IMGS.EN_HEADER);
+                const enFooterData = dataUriToUint8(TMPL_IMGS.EN_FOOTER);
 
                 // Border helpers
                 const bdr = (color, sz = 6) => ({ style: BorderStyle.SINGLE, size: sz, color });
