@@ -630,7 +630,7 @@ function renderArchiveGrid() {
   grid.innerHTML = archive.map((p, i) => `
     <div class="archive-card">
       <div class="archive-card-ref">${p.ref || '—'}</div>
-      <div class="archive-card-name">${p.projectName || currentLang === 'ar' ? 'بدون اسم' : 'Untitled'}</div>
+      <div class="archive-card-name">${p.projectName || (currentLang === 'ar' ? 'بدون اسم' : 'Untitled')}</div>
       <div class="archive-card-client">${p.clientName || ''}</div>
       <div class="archive-card-total">SAR ${(p.totalCost || 0).toLocaleString()}</div>
       <div class="archive-card-actions">
@@ -1044,25 +1044,249 @@ function buildProposalPreview(projectName, clientName, ref, proposalDate, teamCo
 // PRINT
 // ══════════════════════════════════════════════════════
 function printProposal() {
-  const content = document.getElementById('proposalPreview').innerHTML;
+  if (!lastProposalData) { alert(currentLang==='ar'?'اعمل العرض الأول':'Generate proposal first'); return; }
+  const d = lastProposalData;
+  const isAr = printLang === 'ar';
+  const dir = isAr ? 'rtl' : 'ltr';
+  const font = isAr ? "'Noto Sans Arabic', 'Segoe UI', sans-serif" : "'Segoe UI', Tahoma, sans-serif";
+
+  const formatDate = (dt) => {
+    if (!dt) return '—';
+    const [y,m,day] = dt.split('-');
+    return isAr ? `${day}/${m}/${y}` : `${day}/${m}/${y}`;
+  };
+
+  // Build team rows
+  let teamRows = '';
+  if (d.teamMembers && d.teamMembers.length > 0) {
+    const RATES = {'C-Level':9000,'Director':5000,'Manager':4000,'Associate':2000,'Analyst':1500};
+    d.teamMembers.forEach((m,i) => {
+      const cost = Math.round(m.weeks * 5 * (m.allocation/100) * (RATES[m.position]||0));
+      teamRows += `<tr>
+        <td>${i+1}</td>
+        <td>${m.position}</td>
+        <td style="text-align:center">${m.weeks}</td>
+        <td style="text-align:center">${m.allocation}%</td>
+        <td style="text-align:${isAr?'left':'right'}">${cost.toLocaleString()}</td>
+      </tr>`;
+    });
+  }
+
+  // Build services rows
+  let serviceRows = '';
+  if (d.selectedServices && d.selectedServices.length > 0) {
+    d.selectedServices.forEach((s,i) => {
+      serviceRows += `<tr>
+        <td>${i+1}</td>
+        <td>${s.name}</td>
+        <td style="text-align:${isAr?'left':'right'}">${s.price.toLocaleString()}</td>
+      </tr>`;
+    });
+  }
+
+  // Build deliverables rows
+  let delivRows = '';
+  if (d.allocationItems && d.allocationItems.length > 0) {
+    d.allocationItems.forEach(a => {
+      const cost = Math.round(d.totalCost * a.percentage / 100);
+      delivRows += `<tr>
+        <td>${a.name}</td>
+        <td style="text-align:center">${a.percentage}%</td>
+        <td style="text-align:${isAr?'left':'right'}">${cost.toLocaleString()}</td>
+      </tr>`;
+    });
+  }
+
+  const T = {
+    ar: {
+      title:'عرض تكلفة مشروع', ref:'رقم العرض', date:'تاريخ العرض',
+      project:'اسم المشروع', client:'العميل', prepBy:'أعدّه',
+      team:'تفاصيل الفريق', pos:'المسمى الوظيفي', weeks:'الأسابيع',
+      alloc:'نسبة المشاركة', cost:'التكلفة (ريال)',
+      services:'الخدمات والتقنيات', svcName:'الخدمة', svcCost:'التكلفة (ريال)',
+      summary:'ملخص التكاليف', item:'البند', amount:'المبلغ (ريال)',
+      teamCost:'تكلفة الفريق', svcTotal:'تكلفة الخدمات',
+      subtotal:'المجموع الجزئي', vat:'ضريبة القيمة المضافة (15%)',
+      grandTotal:'الإجمالي الكلي شامل الضريبة',
+      deliverables:'توزيع التكاليف على المخرجات',
+      deliv:'المخرج', pct:'النسبة', delivCost:'التكلفة (ريال)',
+      footer:'هذا العرض سري ومعدّ لصالح العميل المذكور أعلاه فقط • اعناب © 2026',
+      no:'م', prepared:'أعدّه: فريق اعناب'
+    },
+    en: {
+      title:'Project Cost Proposal', ref:'Proposal No.', date:'Date',
+      project:'Project Name', client:'Client', prepBy:'Prepared by',
+      team:'Team Breakdown', pos:'Position', weeks:'Weeks',
+      alloc:'Allocation', cost:'Cost (SAR)',
+      services:'Services & Technology', svcName:'Service', svcCost:'Cost (SAR)',
+      summary:'Cost Summary', item:'Item', amount:'Amount (SAR)',
+      teamCost:'Team Cost', svcTotal:'Services Cost',
+      subtotal:'Subtotal', vat:'VAT (15%)',
+      grandTotal:'Grand Total (incl. VAT)',
+      deliverables:'Cost Allocation by Deliverable',
+      deliv:'Deliverable', pct:'Percentage', delivCost:'Cost (SAR)',
+      footer:'This proposal is confidential and prepared exclusively for the above-named client • Aanaab © 2026',
+      no:'#', prepared:'Prepared by: Aanaab Team'
+    }
+  };
+  const t = T[isAr ? 'ar' : 'en'];
+
+  const html = `<!DOCTYPE html>
+<html lang="${isAr?'ar':'en'}" dir="${dir}">
+<head>
+<meta charset="UTF-8">
+<title>${t.title} — ${d.projectName}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:${font};color:#1a1a2e;background:#fff;direction:${dir};}
+  
+  /* PAGE HEADER */
+  .page-header{background:linear-gradient(135deg,#5E2E91 0%,#4A1F75 100%);color:white;padding:30px 40px;display:flex;justify-content:space-between;align-items:center;}
+  .logo-box{font-size:2.2em;font-weight:700;letter-spacing:1px;}
+  .logo-sub{font-size:0.7em;opacity:0.8;margin-top:4px;}
+  .header-meta{text-align:${isAr?'left':'right'};}
+  .header-meta .doc-title{font-size:1.4em;font-weight:700;margin-bottom:8px;}
+  .header-meta table{font-size:0.85em;border:none;}
+  .header-meta td{padding:3px 10px;border:none;}
+  .header-meta td:first-child{opacity:0.75;}
+  .header-meta td:last-child{font-weight:600;}
+
+  /* COLORED BAND */
+  .accent-band{height:6px;background:linear-gradient(90deg,#3CCF91 0%,#5E2E91 100%);}
+
+  /* BODY */
+  .content{padding:30px 40px;}
+
+  /* SECTION TITLE */
+  .section-title{font-size:1em;font-weight:700;color:#5E2E91;text-transform:uppercase;letter-spacing:1px;margin:28px 0 12px;padding-bottom:6px;border-bottom:2px solid #5E2E91;display:flex;align-items:center;gap:8px;}
+
+  /* PROJECT INFO BOX */
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+  .info-item{background:#f8f4fd;border-radius:8px;padding:14px 18px;border-${isAr?'right':'left'}:4px solid #5E2E91;}
+  .info-label{font-size:0.75em;color:#888;margin-bottom:4px;text-transform:uppercase;}
+  .info-value{font-size:1em;font-weight:700;color:#1a1a2e;}
+
+  /* TABLES */
+  table.data{width:100%;border-collapse:collapse;font-size:0.88em;margin-bottom:10px;}
+  table.data th{background:#5E2E91;color:white;padding:10px 14px;font-weight:600;text-align:${isAr?'right':'left'};}
+  table.data td{padding:9px 14px;border-bottom:1px solid #ede8f5;}
+  table.data tr:nth-child(even) td{background:#faf7fe;}
+  table.data tr:hover td{background:#f0e8fc;}
+  table.data .num{text-align:${isAr?'left':'right'};}
+
+  /* SUMMARY TABLE */
+  table.summary{width:60%;margin:0 ${isAr?'0':'auto'} 0 ${isAr?'auto':'0'};border-collapse:collapse;font-size:0.92em;}
+  table.summary td{padding:10px 16px;border-bottom:1px solid #ede8f5;}
+  table.summary .label{color:#555;}
+  table.summary .val{font-weight:600;text-align:${isAr?'left':'right'};}
+  table.summary .subtot td{background:#f8f4fd;font-weight:700;color:#5E2E91;}
+  table.summary .grand td{background:#5E2E91;color:white;font-weight:700;font-size:1.05em;}
+
+  /* FOOTER */
+  .page-footer{margin-top:40px;padding:20px 40px;background:#f8f4fd;border-top:3px solid #5E2E91;display:flex;justify-content:space-between;align-items:center;font-size:0.78em;color:#666;}
+  .footer-logo{font-weight:700;color:#5E2E91;font-size:1.1em;}
+
+  @page{margin:15mm;}
+  @media print{
+    .page-header{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .accent-band{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    table.data th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    table.summary .grand td{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .page-footer{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="logo-box">
+    <div>اعناب</div>
+    <div class="logo-sub">Aanaab EdTech</div>
+  </div>
+  <div class="header-meta">
+    <div class="doc-title">${t.title}</div>
+    <table>
+      <tr><td>${t.ref}</td><td>${d.ref || '—'}</td></tr>
+      <tr><td>${t.date}</td><td>${formatDate(d.proposalDate)}</td></tr>
+    </table>
+  </div>
+</div>
+<div class="accent-band"></div>
+
+<div class="content">
+
+  <!-- PROJECT INFO -->
+  <div class="section-title">📋 ${t.project} / ${t.client}</div>
+  <div class="info-grid">
+    <div class="info-item"><div class="info-label">${t.project}</div><div class="info-value">${d.projectName || '—'}</div></div>
+    <div class="info-item"><div class="info-label">${t.client}</div><div class="info-value">${d.clientName || '—'}</div></div>
+    <div class="info-item"><div class="info-label">${isAr?'مدة المشروع':'Duration'}</div><div class="info-value">${d.durationYears||0}y ${d.durationMonths||0}m ${d.durationWeeks||0}w</div></div>
+    <div class="info-item"><div class="info-label">${t.prepared}</div><div class="info-value">Aanaab Team</div></div>
+  </div>
+
+  ${teamRows ? `
+  <!-- TEAM -->
+  <div class="section-title">👥 ${t.team}</div>
+  <table class="data">
+    <thead><tr>
+      <th style="width:40px">${t.no}</th>
+      <th>${t.pos}</th>
+      <th style="text-align:center">${t.weeks}</th>
+      <th style="text-align:center">${t.alloc}</th>
+      <th style="text-align:${isAr?'left':'right'}">${t.cost}</th>
+    </tr></thead>
+    <tbody>${teamRows}</tbody>
+  </table>` : ''}
+
+  ${serviceRows ? `
+  <!-- SERVICES -->
+  <div class="section-title">🛠️ ${t.services}</div>
+  <table class="data">
+    <thead><tr>
+      <th style="width:40px">${t.no}</th>
+      <th>${t.svcName}</th>
+      <th style="text-align:${isAr?'left':'right'}">${t.svcCost}</th>
+    </tr></thead>
+    <tbody>${serviceRows}</tbody>
+  </table>` : ''}
+
+  <!-- SUMMARY -->
+  <div class="section-title">💰 ${t.summary}</div>
+  <table class="summary">
+    <tr><td class="label">${t.teamCost}</td><td class="val">${d.teamCost.toLocaleString()}</td></tr>
+    <tr><td class="label">${t.svcTotal}</td><td class="val">${d.servicesCost.toLocaleString()}</td></tr>
+    <tr class="subtot"><td>${t.subtotal}</td><td class="val">${(d.teamCost+d.servicesCost).toLocaleString()}</td></tr>
+    ${d.vatEnabled ? `<tr><td class="label">${t.vat}</td><td class="val">${d.vatAmount.toLocaleString()}</td></tr>` : ''}
+    <tr class="grand"><td>${t.grandTotal}</td><td class="val">SAR ${d.totalCost.toLocaleString()}</td></tr>
+  </table>
+
+  ${delivRows ? `
+  <!-- DELIVERABLES -->
+  <div class="section-title">📦 ${t.deliverables}</div>
+  <table class="data">
+    <thead><tr>
+      <th>${t.deliv}</th>
+      <th style="text-align:center">${t.pct}</th>
+      <th style="text-align:${isAr?'left':'right'}">${t.delivCost}</th>
+    </tr></thead>
+    <tbody>${delivRows}</tbody>
+  </table>` : ''}
+
+</div>
+
+<div class="page-footer">
+  <div class="footer-logo">اعناب — Aanaab</div>
+  <div>${t.footer}</div>
+  <div>${d.ref || ''}</div>
+</div>
+
+</body></html>`;
+
   const w = window.open('', '_blank');
-  w.document.write(`
-    <!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
-    <title>Aanaab Proposal</title>
-    <style>
-      body{font-family:'Segoe UI',sans-serif;padding:40px;color:#333;}
-      table{width:100%;border-collapse:collapse;margin-top:15px;}
-      th{background:#5E2E91;color:white;padding:12px;text-align:left;}
-      td{padding:12px;border-bottom:1px solid #eee;}
-      .text-right{text-align:right;}
-      .grand-total{background:#5E2E91;color:white;font-weight:700;}
-      @media print{body{padding:20px;}}
-    </style>
-    </head><body>${content}</body></html>
-  `);
+  w.document.write(html);
   w.document.close();
-  setTimeout(() => w.print(), 800);
+  setTimeout(() => w.print(), 900);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1075,10 +1299,11 @@ function exportToWord(btn) {
   btn.disabled = true;
 
   const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
+  script.src = 'https://unpkg.com/docx@8.5.0/build/index.umd.js';
   script.onload = function() {
     try {
-      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, HeadingLevel, AlignmentType } = docx;
+      const docxLib = window.docx || docx;
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, HeadingLevel, AlignmentType } = docxLib;
       const d = lastProposalData;
       const isAr = printLang === 'ar';
 
@@ -1138,7 +1363,8 @@ function exportToWord(btn) {
 }
 
 function makeDocxRow(label, value, bold) {
-  const { TableRow, TableCell, Paragraph, TextRun, WidthType } = docx;
+  const docxLib = window.docx || docx;
+  const { TableRow, TableCell, Paragraph, TextRun, WidthType } = docxLib;
   return new TableRow({
     children: [
       new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: label, bold: !!bold })] })], width: { size: 70, type: WidthType.PERCENTAGE } }),
