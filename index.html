@@ -463,13 +463,39 @@ let USERS = []; // loaded from Google Sheets
 
 // ── Apps Script Web App URL ──────────────────────────────────────
 // Paste your deployed Web App URL here after deploying Code.gs
-const APPS_SCRIPT_URL = localStorage.getItem('aanaab_script_url') || '';
+const APPS_SCRIPT_URL = localStorage.getItem('aanaab_script_url') || 'https://script.google.com/macros/s/AKfycbwexL-Yhd5hjCTz7DH4tY8R3RS7hAj3XP-80e5NvgmZHpqVmnTKycJAl6PiOqSctCtp/exec';
+
+// JSONP call — bypasses CORS for GET requests
+function apiCallJsonp(params) {
+  return new Promise((resolve) => {
+    const cbName = 'cb_' + Date.now();
+    const url = APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cbName });
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(null);
+    }, 8000);
+    window[cbName] = (data) => {
+      clearTimeout(timer);
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    script.src = url;
+    document.body.appendChild(script);
+  });
+}
 
 async function apiCall(params) {
   if (!APPS_SCRIPT_URL) return null;
+  // Try JSONP first (avoids CORS redirect issues)
+  const result = await apiCallJsonp(params);
+  if (result) return result;
+  // Fallback: plain fetch (works if no redirect)
   try {
     const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params);
-    const r = await fetch(url);
+    const r = await fetch(url, { redirect: 'follow', mode: 'cors' });
     return await r.json();
   } catch(e) { return null; }
 }
@@ -479,10 +505,12 @@ async function apiPost(body) {
   try {
     const r = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
+      redirect: 'follow',
+      mode: 'cors',
       body: JSON.stringify(body)
     });
     return await r.json();
-  } catch(e) { return null; }
+  } catch(e) { console.error('apiPost error:', e); return null; }
 }
 
 
