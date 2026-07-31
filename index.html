@@ -658,7 +658,7 @@ function setLanguage(lang) {
   });
 
   // Re-render archive so card labels update
-  renderArchiveGrid();
+  renderArchiveGrid(); // fire-and-forget OK here
 }
 
 function setPrintLanguage(lang) {
@@ -671,12 +671,12 @@ function setPrintLanguage(lang) {
 // ══════════════════════════════════════════════════════
 // PROPOSAL NUMBER (YYYYMMDD-XXX)
 // ══════════════════════════════════════════════════════
-function generateProposalNumber() {
+async function generateProposalNumber() {
   const dateVal = document.getElementById('proposalDate').value;
   if (!dateVal) { document.getElementById('proposalNumInput').value = ''; return; }
 
   const prefix = dateVal.replace(/-/g, ''); // YYYYMMDD
-  const archive = getArchive();
+  const archive = await getArchive();
   const sameDay = archive.filter(p => p.ref && p.ref.startsWith(prefix));
   const seq = String(sameDay.length + 1).padStart(3, '0');
   document.getElementById('proposalNumInput').value = prefix + '-' + seq;
@@ -815,6 +815,24 @@ async function deleteProposalFromSheet(ref) {
   await apiPost({ action: 'deleteProposal', ref });
 }
 
+async function deleteFromArchive(idx) {
+  if (!confirm(currentLang === 'ar' ? 'هل تريد حذف هذا العرض؟' : 'Delete this proposal?')) return;
+  const archive = await getArchive();
+  if (!archive[idx]) return;
+  const ref = archive[idx].ref;
+
+  // Delete from Sheets
+  deleteProposalFromSheet(ref);
+
+  // Delete from localStorage backup
+  let localArr = [];
+  try { localArr = JSON.parse(localStorage.getItem(ARCHIVE_KEY) || '[]'); } catch(e){}
+  const localIdx = localArr.findIndex(p => p.ref === ref);
+  if (localIdx !== -1) { localArr.splice(localIdx, 1); localStorage.setItem(ARCHIVE_KEY, JSON.stringify(localArr)); }
+
+  await renderArchiveGrid();
+}
+
 async function saveToArchive(proposalData) {
   // Save to Google Sheets (primary)
   saveProposalToSheet(proposalData); // fire-and-forget
@@ -892,14 +910,6 @@ async function copyAsNewQuote(idx) {
   loadProposalData(p, true);
 }
 
-function deleteFromArchive(idx) {
-  if (!confirm(currentLang === 'ar' ? 'هل تريد حذف هذا العرض؟' : 'Delete this proposal?')) return;
-  const archive = getArchive();
-  archive.splice(idx, 1);
-  saveArchive(archive);
-  renderArchiveGrid();
-  updateArchiveCount();
-}
 
 function loadProposalData(p, generateNewRef) {
   // Basic fields
@@ -1713,12 +1723,13 @@ function resetForm() {
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
-(function init() {
+(async function init() {
   // Set today's date and generate first proposal number
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('proposalDate').value = today;
-  generateProposalNumber();
-  updateArchiveCount();
+  await initLogin();
+  await generateProposalNumber();
+  await updateArchiveCount();
 })();
 </script>
 </body>
