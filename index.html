@@ -567,33 +567,42 @@ function saveScriptUrl() {
 }
 
 async function loadUsersFromSheet() {
-  const loginSel = document.getElementById('loginUserSelect');
-  const ownerSel = document.getElementById('projectOwner');
+  const loginSel  = document.getElementById('loginUserSelect');
+  const ownerSel  = document.getElementById('projectOwner');
+
+  if (!loginSel) return; // overlay may have been replaced
 
   // Show loading state
   loginSel.innerHTML = '<option value="">⏳ Loading users...</option>';
 
   const result = await apiCall({ action: 'getUsers' });
 
+  // Re-fetch element after await (DOM could have changed)
+  const loginSel2 = document.getElementById('loginUserSelect');
+  const ownerSel2 = document.getElementById('projectOwner');
+  if (!loginSel2) return;
+
   if (!result || !result.users || result.users.length === 0) {
-    loginSel.innerHTML = '<option value="">⚠️ Could not load users</option>';
+    loginSel2.innerHTML = '<option value="">⚠️ Could not load users — check sheet</option>';
     return;
   }
 
   USERS = result.users;
 
   // Populate login dropdown
-  loginSel.innerHTML = '<option value="">-- اختر حسابك / Select account --</option>';
-  ownerSel.innerHTML = '<option value="">-- Select owner --</option>';
+  loginSel2.innerHTML = '<option value="">-- اختر حسابك / Select account --</option>';
+  if (ownerSel2) ownerSel2.innerHTML = '<option value="">-- Select owner --</option>';
 
   USERS.forEach(u => {
     const opt = document.createElement('option');
     opt.value = u.email;
     opt.textContent = u.name + ' (' + u.email + ')';
-    loginSel.appendChild(opt);
+    loginSel2.appendChild(opt);
 
-    const opt2 = opt.cloneNode(true);
-    ownerSel.appendChild(opt2);
+    if (ownerSel2) {
+      const opt2 = opt.cloneNode(true);
+      ownerSel2.appendChild(opt2);
+    }
   });
 
   // Check saved session
@@ -604,9 +613,11 @@ async function loadUsersFromSheet() {
       if (USERS.find(x => x.email === u.email)) {
         currentUser = u;
         document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('userBadge').style.display = '';
-        document.getElementById('userBadgeName').textContent = u.name;
-        ownerSel.value = u.email;
+        const badge = document.getElementById('userBadge');
+        const badgeName = document.getElementById('userBadgeName');
+        if (badge) badge.style.display = '';
+        if (badgeName) badgeName.textContent = u.name;
+        if (ownerSel2) ownerSel2.value = u.email;
       }
     }
   } catch(e){}
