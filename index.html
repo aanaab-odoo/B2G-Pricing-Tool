@@ -1219,6 +1219,8 @@ function calculateAndGenerate() {
     teamMembers,
     allocationItems: allocItems,
     teamCost, servicesCost, vatAmount, totalCost,
+    ownerEmail: (document.getElementById('projectOwner') || {}).value || (currentUser ? currentUser.email : ''),
+    ownerName:  currentUser ? currentUser.name : ((document.getElementById('projectOwner') || {}).value || ''),
     savedAt: new Date().toISOString()
   };
   saveToArchive(lastProposalData);
@@ -1526,97 +1528,149 @@ async function exportToExcel() {
     });
   }
   const XLSX = window.XLSX;
-
   const wb = XLSX.utils.book_new();
   const RATES = {'C-Level':9000,'Director':5000,'Manager':4000,'Associate':2000,'Analyst':1500};
+  const totalWks = (parseFloat(d.durationYears)||0)*52 + (parseFloat(d.durationMonths)||0)*4.33 + (parseFloat(d.durationWeeks)||0);
 
-  // ── Sheet 1: Costing ──────────────────────────────
+  // ══════════════════════════════════════════════════
+  // Sheet 1: Costing (matches Pricing_Temp_ layout)
+  // ══════════════════════════════════════════════════
   const rows = [];
+
+  // Header info
   rows.push(['Launch date', d.proposalDate || '']);
   rows.push(['Client', d.clientName || '']);
-  rows.push(['Project name', d.projectName || '', parseFloat(d.durationWeeks)||0, '# of Weeks']);
-  const totalWks = (parseFloat(d.durationYears)||0)*52 + (parseFloat(d.durationMonths)||0)*4.33 + (parseFloat(d.durationWeeks)||0);
+  rows.push(['Project name', d.projectName || '', Math.round(totalWks), '# of Weeks']);
   rows.push(['Total project duration in weeks', Math.round(totalWks)]);
   rows.push([]);
   rows.push(['Guidance : Please fill only Green Cells']);
   rows.push([]);
-  rows.push(['Staff', 'Number of units', 'Daily rate SAR', 'Monthly rate SAR', 'Capacity on the Project', 'Weeks', 'Days', 'Total Cost SAR']);
 
-  // Team members
+  // ── Aanaab Staff ──
+  rows.push(['Staff', 'Number of unit', 'Daily rate SAR', 'Monthly rate SAR', 'Capacity on the Project', 'Weeks', 'Days', 'Total Cost SAR']);
+
   if (d.teamMembers && d.teamMembers.length > 0) {
     d.teamMembers.forEach(m => {
-      const rate = RATES[m.position] || 0;
+      const rate      = RATES[m.position] || 0;
       const monthRate = rate * 20;
-      const days = Math.round(m.weeks * 5 * (m.allocation / 100));
-      const cost = days * rate;
-      rows.push([m.position, 1, rate, monthRate, m.allocation/100, m.weeks, days, cost]);
+      const alloc     = parseFloat(m.allocation) / 100;
+      const weeks     = parseFloat(m.weeks) || 0;
+      const days      = Math.round(weeks * 5 * alloc);
+      const cost      = days * rate;
+      rows.push([m.position, 1, rate, monthRate, alloc, weeks, days, cost]);
     });
-    rows.push(['Total Aanaab Staff Cost', '', '', '', '', '', '', d.teamCost]);
   }
-
+  rows.push(['Total Aanaab Staff Cost', '', '', '', '', '', '', d.teamCost]);
   rows.push([]);
+
+  // ── External Vendors ──
   rows.push(['External Vendors services', 'Quantity', 'Cost per unit SAR', 'Duration of services/Comments', '', '', '', 'Total Cost SAR']);
   if (d.selectedServices && d.selectedServices.length > 0) {
     d.selectedServices.forEach(s => {
       rows.push([s.name, 1, s.price, s.description || 'Lump Sum', '', '', '', s.price]);
     });
+  } else {
+    rows.push(['—', '', 0, '', '', '', '', 0]);
   }
   rows.push([]);
-  rows.push(['Subtotal', '', '', '', '', '', '', d.teamCost + d.servicesCost]);
+
+  // ── Totals ──
+  rows.push(['Total Aanaab Staff Cost', '', '', '', '', '', '', d.teamCost, 'per project']);
+  rows.push([]);
+  rows.push(['Subtotal (before VAT)', '', '', '', '', '', '', d.teamCost + d.servicesCost]);
   if (d.vatEnabled) {
     rows.push(['VAT 15%', '', '', '', '', '', '', d.vatAmount]);
   }
   rows.push(['Grand Total (incl. VAT)', '', '', '', '', '', '', d.totalCost]);
   rows.push([]);
-  rows.push(['Cost Allocation by Deliverable']);
-  rows.push(['Deliverable', 'Percentage', 'Cost (SAR)']);
+
+  // ── Cost Allocation by Deliverable ──
   if (d.allocationItems && d.allocationItems.length > 0) {
+    rows.push(['Cost Allocation by Deliverable']);
+    rows.push(['Deliverable', 'Percentage', 'Cost (SAR)']);
     d.allocationItems.forEach(a => {
-      const cost = Math.round(d.totalCost * a.percentage / 100);
-      rows.push([a.name, a.percentage + '%', cost]);
+      rows.push([a.name, a.percentage / 100, Math.round(d.totalCost * a.percentage / 100)]);
     });
   }
 
   const ws1 = XLSX.utils.aoa_to_sheet(rows);
-
-  // Column widths
   ws1['!cols'] = [
-    {wch:35},{wch:15},{wch:15},{wch:20},{wch:20},{wch:10},{wch:10},{wch:15}
+    {wch:35},{wch:16},{wch:16},{wch:28},{wch:22},{wch:10},{wch:10},{wch:16},{wch:12}
   ];
 
-  // Style header rows (bold / green)
-  const boldRows = [0,1,2,3,5,7];
-  boldRows.forEach(r => {
-    const cell = ws1[XLSX.utils.encode_cell({r, c:0})];
-    if (cell) cell.s = { font: { bold: true } };
-  });
+  // Format percentage cells (column E = index 4) and number cells
+  for (let r = 7; r < rows.length; r++) {
+    const pctCell = ws1[XLSX.utils.encode_cell({r, c:4})];
+    if (pctCell && typeof pctCell.v === 'number' && pctCell.v <= 1 && pctCell.v > 0) {
+      pctCell.z = '0%';
+    }
+    const costCell = ws1[XLSX.utils.encode_cell({r, c:7})];
+    if (costCell && typeof costCell.v === 'number') {
+      costCell.z = '#,##0';
+    }
+  }
 
   XLSX.utils.book_append_sheet(wb, ws1, 'Costing');
 
-  // ── Sheet 2: Summary ──────────────────────────────
-  const sumRows = [
-    ['Aanaab Project Proposal', '', '', d.ref || ''],
-    ['', '', '', ''],
-    ['Project', d.projectName || ''],
-    ['Client', d.clientName || ''],
-    ['Date', d.proposalDate || ''],
-    ['Owner', d.ownerName || ''],
-    ['', '', '', ''],
-    ['Cost Summary', '', '', ''],
-    ['Item', '', 'Amount (SAR)', ''],
-    ['Team Cost', '', d.teamCost, ''],
-    ['Services Cost', '', d.servicesCost, ''],
-    ['Subtotal', '', d.teamCost + d.servicesCost, ''],
+  // ══════════════════════════════════════════════════
+  // Sheet 2: Staff rates (matches Staff tab)
+  // ══════════════════════════════════════════════════
+  const staffRows = [
+    ['SN', 'Department/Position', 'Positions', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Total', 'Margin', 'Monthly Rate', 'Daily Rate', '', Math.round(totalWks)],
+    []
   ];
-  if (d.vatEnabled) sumRows.push(['VAT 15%', '', d.vatAmount, '']);
-  sumRows.push(['Grand Total', '', d.totalCost, '']);
+  const staffDefs = [
+    {sn:3,  dept:'C Level',   pos:'C Level',    rate:9000},
+    {sn:2,  dept:'Director',  pos:'Director',   rate:5000},
+    {sn:37, dept:'Manager',   pos:'Manager',    rate:4000},
+    {sn:22, dept:'Associate', pos:'Associate',  rate:2000},
+    {sn:27, dept:'Analyst',   pos:'Analyst',    rate:1500},
+  ];
+  staffDefs.forEach(s => {
+    staffRows.push([s.sn, s.dept, s.pos, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', s.rate * 20, s.rate]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(staffRows);
+  ws2['!cols'] = [{wch:6},{wch:18},{wch:28},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:6},{wch:12},{wch:12},{wch:14},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Staff');
 
-  const ws2 = XLSX.utils.aoa_to_sheet(sumRows);
-  ws2['!cols'] = [{wch:25},{wch:20},{wch:20},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+  // ══════════════════════════════════════════════════
+  // Sheet 3: Project Summary
+  // ══════════════════════════════════════════════════
+  const sumRows = [
+    ['Aanaab Project Proposal Summary'],
+    [],
+    ['Proposal No.',   d.ref || ''],
+    ['Project',        d.projectName || ''],
+    ['Client',         d.clientName  || ''],
+    ['Date',           d.proposalDate || ''],
+    ['Owner',          d.ownerName   || ''],
+    ['Duration (wks)', Math.round(totalWks)],
+    [],
+    ['Cost Summary',   'SAR'],
+    ['Team Cost',      d.teamCost],
+    ['Services Cost',  d.servicesCost],
+    ['Subtotal',       d.teamCost + d.servicesCost],
+  ];
+  if (d.vatEnabled) sumRows.push(['VAT 15%', d.vatAmount]);
+  sumRows.push(['Grand Total', d.totalCost]);
+
+  if (d.allocationItems && d.allocationItems.length > 0) {
+    sumRows.push([], ['Deliverables', 'Percentage', 'Cost (SAR)']);
+    d.allocationItems.forEach(a => {
+      sumRows.push([a.name, a.percentage + '%', Math.round(d.totalCost * a.percentage / 100)]);
+    });
+  }
+
+  const ws3 = XLSX.utils.aoa_to_sheet(sumRows);
+  ws3['!cols'] = [{wch:22},{wch:18},{wch:16}];
+  // Bold totals
+  ['A10','A13','B13','A14','B14'].forEach(addr => {
+    if (ws3[addr]) ws3[addr].s = {font:{bold:true}};
+  });
+  XLSX.utils.book_append_sheet(wb, ws3, 'Summary');
 
   // Download
-  const fname = 'Aanaab_Proposal_' + (d.ref || 'export') + '.xlsx';
+  const fname = 'Aanaab_' + (d.ref || 'Proposal') + '.xlsx';
   XLSX.writeFile(wb, fname);
 }
 
