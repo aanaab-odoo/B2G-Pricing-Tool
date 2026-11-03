@@ -1342,8 +1342,10 @@ function getProposalData() {
   const rawDate = document.getElementById('proposalDate').value;
   const proposalDate = rawDate || new Date().toISOString().split('T')[0];
 
-  const totalEl = document.getElementById('totalCostDisplay');
-  const totalCost = totalEl ? parseFloat(totalEl.textContent.replace(/[^0-9.]/g,'')) || 0 : 0;
+  // Base for print = amount BEFORE VAT (the template adds VAT itself)
+  const totalCost = lastProposalData
+    ? (lastProposalData.teamCost + lastProposalData.servicesCost)
+    : 0;
 
   const allocItems = [];
   document.querySelectorAll('.allocation-item').forEach(item => {
@@ -1375,7 +1377,7 @@ function getProposalData() {
 function printProposal() {
   const isArabic = printLang === 'ar';
   const data = getProposalData();
-  const VAT  = 0.15;
+  const VAT  = (lastProposalData && lastProposalData.vatEnabled === false) ? 0 : 0.15;
   const fmt  = n => Number(n).toLocaleString('en-US', {minimumFractionDigits: 2});
   const today = new Date(data.proposalDate).toLocaleDateString(isArabic ? 'ar-SA' : 'en-US');
 
