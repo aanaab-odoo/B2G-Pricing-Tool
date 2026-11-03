@@ -328,7 +328,7 @@ body.arabic .text-right{text-align:left;}
     </div>
 
     <div id="database-tab" class="tab-content active">
-      <div class="service-selector">
+      <div class="service-selector" style="grid-template-columns:2fr 1fr 90px auto;">
         <div class="form-group" style="margin-bottom:0;">
           <label data-en="Select Service" data-ar="اختر خدمة">Select Service</label>
           <select id="databaseServiceSelect" onchange="updateDatabasePrice()">
@@ -336,19 +336,27 @@ body.arabic .text-right{text-align:left;}
           </select>
         </div>
         <div class="price-display" id="databasePriceDisplay">SAR 0</div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label data-en="Qty" data-ar="الكمية">Qty</label>
+          <input type="number" id="databaseServiceQty" value="1" min="1" step="1">
+        </div>
         <button class="add-service-btn" onclick="addDatabaseService()" data-en="Add" data-ar="إضافة">Add</button>
       </div>
     </div>
 
     <div id="custom-tab" class="tab-content">
-      <div class="service-selector" style="grid-template-columns:2fr 1fr auto;">
+      <div class="service-selector" style="grid-template-columns:2fr 1fr 90px auto;">
         <div class="form-group" style="margin-bottom:0;">
           <label data-en="Service Name" data-ar="اسم الخدمة">Service Name</label>
           <input type="text" id="customServiceName" data-en-ph="Service name" data-ar-ph="اسم الخدمة" placeholder="Service name">
         </div>
         <div class="form-group" style="margin-bottom:0;">
-          <label data-en="Price (SAR)" data-ar="السعر (ريال)">Price (SAR)</label>
+          <label data-en="Unit Price (SAR)" data-ar="سعر الوحدة (ريال)">Unit Price (SAR)</label>
           <input type="number" id="customServicePrice" placeholder="0">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label data-en="Qty" data-ar="الكمية">Qty</label>
+          <input type="number" id="customServiceQty" value="1" min="1" step="1">
         </div>
         <button class="add-service-btn" onclick="addCustomService()" data-en="Add" data-ar="إضافة">Add</button>
       </div>
@@ -1047,7 +1055,9 @@ function addDatabaseService() {
   const idx = parseInt(sel.value);
   if (isNaN(idx) || !servicesDB[idx]) { alert('Please select a service'); return; }
   const s = servicesDB[idx];
-  selectedServices.push({ name: s.name, price: s.price, description: s.description || '' });
+  const qty = Math.max(1, parseFloat(document.getElementById('databaseServiceQty').value) || 1);
+  selectedServices.push({ name: s.name, price: s.price, qty, description: s.description || '' });
+  document.getElementById('databaseServiceQty').value = 1;
   renderServiceList();
 }
 
@@ -1056,10 +1066,18 @@ function addCustomService() {
   const price = parseFloat(document.getElementById('customServicePrice').value) || 0;
   const desc  = document.getElementById('customServiceDesc').value.trim();
   if (!name) { alert('Please enter a service name'); return; }
-  selectedServices.push({ name, price, description: desc });
+  const qty = Math.max(1, parseFloat(document.getElementById('customServiceQty').value) || 1);
+  selectedServices.push({ name, price, qty, description: desc });
+  document.getElementById('customServiceQty').value = 1;
   document.getElementById('customServiceName').value  = '';
   document.getElementById('customServicePrice').value = '';
   document.getElementById('customServiceDesc').value  = '';
+  renderServiceList();
+}
+
+function updateServiceQty(idx, val) {
+  if (!selectedServices[idx]) return;
+  selectedServices[idx].qty = Math.max(1, parseFloat(val) || 1);
   renderServiceList();
 }
 
@@ -1080,11 +1098,19 @@ function renderServiceList() {
 
   let total = 0;
   container.innerHTML = selectedServices.map((s, i) => {
-    total += s.price;
+    const qty  = s.qty || 1;
+    const line = s.price * qty;
+    total += line;
     return `
       <div class="service-item">
-        <div class="service-info"><h4>${s.name}</h4></div>
-        <span class="service-price">SAR ${s.price.toLocaleString()}</span>
+        <div class="service-info" style="flex:1;">
+          <h4>${s.name}</h4>
+          ${s.description ? `<div style="font-size:0.82em;color:#888;">${s.description}</div>` : ''}
+          <div style="font-size:0.85em;color:#666;margin-top:4px;">SAR ${s.price.toLocaleString()} × 
+            <input type="number" min="1" step="1" value="${qty}" onchange="updateServiceQty(${i}, this.value)" style="width:70px;padding:4px 6px;border:1px solid #ccc;border-radius:6px;">
+          </div>
+        </div>
+        <span class="service-price">SAR ${line.toLocaleString()}</span>
         <button class="remove-btn" onclick="removeService(${i})">✕</button>
       </div>
     `;
@@ -1154,7 +1180,7 @@ function calculateAndGenerate() {
   if (!projectName) { alert(currentLang==='ar'?'أدخل اسم المشروع':'Please enter a project name'); return; }
 
   const teamCost     = calculateTeamCost();
-  const servicesCost = selectedServices.reduce((s, x) => s + x.price, 0);
+  const servicesCost = selectedServices.reduce((s, x) => s + x.price * (x.qty || 1), 0);
   const subtotal     = teamCost + servicesCost;
   const vatAmount    = vatEnabled ? Math.round(subtotal * 0.15) : 0;
   const totalCost    = subtotal + vatAmount;
@@ -1568,7 +1594,8 @@ async function exportToExcel() {
   rows.push(['External Vendors services', 'Quantity', 'Cost per unit SAR', 'Duration of services/Comments', '', '', '', 'Total Cost SAR']);
   if (d.selectedServices && d.selectedServices.length > 0) {
     d.selectedServices.forEach(s => {
-      rows.push([s.name, 1, s.price, s.description || 'Lump Sum', '', '', '', s.price]);
+      const q = s.qty || 1;
+      rows.push([s.name, q, s.price, s.description || 'Lump Sum', '', '', '', s.price * q]);
     });
   } else {
     rows.push(['—', '', 0, '', '', '', '', 0]);
